@@ -1,6 +1,8 @@
 import os
+import re
 import json
 import time
+import unicodedata
 import numpy as np
 from pathlib import Path
 from typing import List, Dict, Any, Tuple
@@ -157,9 +159,79 @@ class FISCRagEngine:
         max_score = results[0]["score"] if results else 0.0
         return results, max_score
 
+    def _match_conversational_intent(self, question: str) -> str | None:
+        """Responde saludos, agradecimientos y consultas sobre el alcance del asistente."""
+        norm = unicodedata.normalize("NFKD", question.lower())
+        norm = "".join(ch for ch in norm if not unicodedata.combining(ch))
+        norm = re.sub(r"[^a-z0-9\s]", " ", norm)
+        norm = re.sub(r"\s+", " ", norm).strip()
+
+        greetings = {
+            "hola", "buenos dias", "buenas tardes", "buenas noches", "buenas",
+            "buen dia", "saludos", "hey", "hi", "hello", "hola buenas", "hola buen dia"
+        }
+        thanks = {
+            "gracias", "muchas gracias", "mil gracias", "ok gracias", "listo gracias"
+        }
+        help_phrases = {
+            "ayuda", "help", "quien eres", "que eres", "para que sirves",
+            "como funcionas", "que haces", "que puedes hacer",
+            "en que me puedes ayudar", "en que puedes ayudarme", "en que puedes ayudar",
+            "como me puedes ayudar", "como puedes ayudarme",
+            "sobre que te puedo preguntar", "que te puedo preguntar",
+            "que temas cubres", "que temas manejas", "que tramites cubres",
+            "que tramites manejas", "que sabes hacer", "cuales son tus funciones",
+            "que informacion tienes", "de que me puedes informar"
+        }
+
+        if norm in thanks:
+            return (
+                "¡Con mucho gusto! Si tienes otra consulta sobre matrícula, graduación, "
+                "convalidaciones o el calendario académico de la FISC-UTP, escríbeme cuando gustes."
+            )
+
+        is_greeting = norm in greetings
+        is_help = norm in help_phrases or any(
+            p in norm for p in (
+                "en que me puedes ayudar",
+                "en que puedes ayudar",
+                "como me puedes ayudar",
+                "que puedes hacer",
+                "que te puedo preguntar",
+                "sobre que puedo preguntar",
+                "que tramites cubres",
+                "que temas cubres",
+            )
+        )
+        if is_greeting or is_help:
+            return (
+                "¡Hola! Soy el asistente virtual de la Secretaría Académica de la **FISC-UTP**. "
+                "Puedo ayudarte con consultas basadas en los reglamentos oficiales sobre:\n"
+                "• **Matrícula y créditos:** requisitos, fechas de pago ordinario/recargo y créditos adicionales.\n"
+                "• **Retiro e inclusión de asignaturas:** plazos y procedimientos.\n"
+                "• **Trabajo de Graduación:** opciones (Tesis Teórica, Teórico-Práctica, Práctica Profesional, Postgrado, Cursos en el Extranjero y Certificación Internacional), índices mínimos y requisitos.\n"
+                "• **Convalidaciones de créditos:** internas (cambio de carrera) y externas.\n"
+                "• **Calendario Académico 2026–2027:** inicio/fin de clases, exámenes finales y verano.\n"
+                "• **Otros servicios FISC:** examen de rehabilitación, examen extraordinario y copia de examen semestral.\n\n"
+                "Si necesitas revisar notas o trámites personales, puedes usar el botón **Contactar Secretaría**."
+            )
+        return None
+
     def ask(self, question: str) -> Dict[str, Any]:
         """Procesa la pregunta, aplica umbral de derivación < 0.70 y mide la latencia."""
         start_time = time.perf_counter()
+
+        conversational_reply = self._match_conversational_intent(question)
+        if conversational_reply is not None:
+            latency = round(time.perf_counter() - start_time, 3)
+            return {
+                "answer": conversational_reply,
+                "sources": ["Base Documental Oficial FISC-UTP"],
+                "confidence": 1.0,
+                "latency_s": latency,
+                "derived": False
+            }
+
         retrieved, max_score = self._retrieve(question, top_k=4)
 
         # RF4: Derivación automática cuando la confianza/similitud es menor al umbral
