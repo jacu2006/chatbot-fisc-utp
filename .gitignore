@@ -1,0 +1,17 @@
+# Entorno y secretos
+.env
+venv/
+
+# Caché y compilados de Python
+__pycache__/
+*.py[cod]
+
+# Registros locales de pruebas y derivaciones
+logs/
+
+# Binarios portables locales de Cloudflare Tunnel
+cloudflared*.exe
+
+# Sistema operativo
+.DS_Store
+Thumbs.db

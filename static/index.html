@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Asistente Académico FISC - UTP</title>
+  <style>
+    :root {
+      --utp-purple: #5B2C6F;
+      --utp-purple-dark: #421E52;
+      --utp-gold: #D4AC0D;
+      --bg: #F4F6F9;
+      --card: #FFFFFF;
+      --text: #1F2937;
+      --muted: #6B7280;
+      --border: #E5E7EB;
+      --warn-bg: #FEF3C7;
+      --warn-text: #92400E;
+    }
+    * { box-sizing: border-box; font-family: 'Segoe UI', system-ui, sans-serif; }
+    body { margin: 0; background: var(--bg); color: var(--text); display: flex; justify-content: center; height: 100vh; }
+    .app-container {
+      width: 100%; max-width: 920px; height: 100vh; background: var(--card);
+      display: flex; flex-direction: column; box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+    }
+    header {
+      background: linear-gradient(135deg, var(--utp-purple), var(--utp-purple-dark));
+      color: white; padding: 16px 24px; display: flex; justify-content: space-between; align-items: center;
+      border-bottom: 4px solid var(--utp-gold);
+    }
+    header h1 { margin: 0; font-size: 1.15rem; font-weight: 700; }
+    header p { margin: 2px 0 0; font-size: 0.82rem; opacity: 0.9; }
+    .btn-handoff-top {
+      background: var(--utp-gold); color: #1F2937; border: none; padding: 8px 14px;
+      border-radius: 8px; font-weight: 600; font-size: 0.82rem; cursor: pointer;
+    }
+    .btn-handoff-top:hover { filter: brightness(0.95); }
+
+    .quick-topics {
+      padding: 10px 20px; background: #FAF9FC; border-bottom: 1px solid var(--border);
+      display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+    }
+    .quick-topics span { font-size: 0.78rem; color: var(--muted); font-weight: 600; }
+    .chip {
+      background: white; border: 1px solid #D1D5DB; color: var(--utp-purple);
+      padding: 5px 10px; border-radius: 16px; font-size: 0.78rem; cursor: pointer;
+      transition: all 0.15s;
+    }
+    .chip:hover { background: var(--utp-purple); color: white; border-color: var(--utp-purple); }
+
+    .chat-box {
+      flex: 1; padding: 20px 24px; overflow-y: auto; display: flex; flex-direction: column; gap: 14px;
+    }
+    .msg { max-width: 82%; padding: 12px 16px; border-radius: 12px; line-height: 1.48; font-size: 0.92rem; }
+    .msg.user { align-self: flex-end; background: var(--utp-purple); color: white; border-bottom-right-radius: 2px; }
+    .msg.bot { align-self: flex-start; background: #F3F4F6; color: var(--text); border-bottom-left-radius: 2px; border: 1px solid var(--border); }
+    .meta-bar {
+      margin-top: 8px; padding-top: 8px; border-top: 1px solid #E5E7EB;
+      font-size: 0.75rem; color: var(--muted); display: flex; flex-wrap: wrap; gap: 8px; align-items: center;
+    }
+    .badge {
+      background: #EDE9FE; color: var(--utp-purple); padding: 2px 8px; border-radius: 6px; font-weight: 600;
+    }
+    .badge-warn {
+      background: var(--warn-bg); color: var(--warn-text); padding: 2px 8px; border-radius: 6px; font-weight: 600;
+    }
+    .handoff-inline {
+      margin-top: 8px; background: var(--utp-purple); color: white; border: none;
+      padding: 6px 12px; border-radius: 6px; font-size: 0.8rem; cursor: pointer;
+    }
+
+    .input-area {
+      padding: 14px 20px; border-top: 1px solid var(--border); display: flex; gap: 10px; background: white;
+    }
+    .input-area input {
+      flex: 1; padding: 11px 14px; border: 1px solid #D1D5DB; border-radius: 10px;
+      font-size: 0.92rem; outline: none;
+    }
+    .input-area input:focus { border-color: var(--utp-purple); }
+    .input-area button {
+      background: var(--utp-purple); color: white; border: none; padding: 0 20px;
+      border-radius: 10px; font-weight: 600; cursor: pointer;
+    }
+    .input-area button:disabled { opacity: 0.6; cursor: not-allowed; }
+    .survey-bar {
+      padding: 7px 20px; background: #FAF9FC; border-top: 1px solid var(--border);
+      text-align: center; font-size: 0.78rem; color: var(--muted);
+    }
+    .survey-bar a {
+      color: var(--utp-purple); font-weight: 600; text-decoration: none;
+    }
+    .survey-bar a:hover { text-decoration: underline; color: var(--utp-purple-dark); }
+
+    /* Modal de derivación */
+    .modal-backdrop {
+      display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.45);
+      justify-content: center; align-items: center; z-index: 50;
+    }
+    .modal {
+      background: white; width: 92%; max-width: 440px; padding: 22px; border-radius: 12px;
+      box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    }
+    .modal h2 { margin: 0 0 8px; font-size: 1.05rem; color: var(--utp-purple); }
+    .modal p { margin: 0 0 14px; font-size: 0.84rem; color: var(--muted); }
+    .modal label { display: block; font-size: 0.8rem; font-weight: 600; margin-top: 10px; }
+    .modal input, .modal textarea {
+      width: 100%; margin-top: 4px; padding: 8px 10px; border: 1px solid #D1D5DB;
+      border-radius: 8px; font-size: 0.88rem;
+    }
+    .modal-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 16px; }
+    .btn-secondary { background: #E5E7EB; color: #374151; border: none; padding: 8px 14px; border-radius: 8px; cursor: pointer; }
+    .btn-primary { background: var(--utp-purple); color: white; border: none; padding: 8px 14px; border-radius: 8px; cursor: pointer; font-weight: 600; }
+  </style>
+</head>
+<body>
+  <div class="app-container">
+    <header>
+      <div>
+        <h1>Asistente Virtual – Secretaría Académica FISC</h1>
+        <p>Universidad Tecnológica de Panamá | Prototipo PLN + RAG (Base Documental Oficial)</p>
+      </div>
+      <button class="btn-handoff-top" onclick="openModal('')">Contactar Secretaría</button>
+    </header>
+
+    <div class="quick-topics">
+      <span>Consultas rápidas:</span>
+      <button class="chip" onclick="sendQuick('¿Cuáles son las fechas de matrícula según el calendario académico?')">Calendario y Matrícula</button>
+      <button class="chip" onclick="sendQuick('¿Cómo funciona el procedimiento de retiro e inclusión de asignaturas?')">Retiro e Inclusión</button>
+      <button class="chip" onclick="sendQuick('¿Qué opciones de trabajo de graduación ofrece la FISC y qué índice requieren?')">Graduación</button>
+      <button class="chip" onclick="sendQuick('¿Cuáles son los requisitos y costos para convalidar créditos?')">Convalidaciones</button>
+    </div>
+
+    <div id="chatBox" class="chat-box">
+      <div class="msg bot">
+        ¡Hola! Soy el asistente académico de la <strong>FISC-UTP</strong>. Puedo orientarte 24/7 sobre
+        <strong>matrícula, retiro e inclusión, requisitos de graduación, créditos, convalidaciones y calendario académico</strong>
+        usando reglamentos oficiales. ¿En qué te ayudo hoy?
+      </div>
+    </div>
+
+    <div class="input-area">
+      <input id="questionInput" type="text" placeholder="Escribe tu consulta académica aquí..." onkeydown="if(event.key==='Enter') sendMessage()" />
+      <button id="sendBtn" onclick="sendMessage()">Enviar</button>
+    </div>
+    <div class="survey-bar">
+      <a href="https://docs.google.com/forms/d/e/1FAIpQLSc0MBwFoyuXbGAFp62GcJaSp34Fpl6AdZ4l34Kg8NbiRqnlKA/viewform" target="_blank" rel="noopener noreferrer">
+        ¿Ya probaste el asistente? Completa nuestra encuesta de usabilidad (1 min)
+      </a>
+    </div>
+  </div>
+
+  <!-- Modal de Derivación a Funcionario (RF4) -->
+  <div id="handoffModal" class="modal-backdrop">
+    <div class="modal">
+      <h2>Derivar consulta a Secretaría Académica</h2>
+      <p>Tu solicitud será registrada para atención directa por un funcionario de la FISC.</p>
+      <label>Nombre completo</label>
+      <input id="hName" type="text" placeholder="Ej. Javier Acuña" />
+      <label>Correo institucional (@utp.ac.pa)</label>
+      <input id="hEmail" type="email" placeholder="nombre.apellido@utp.ac.pa" />
+      <label>Consulta</label>
+      <textarea id="hQuestion" rows="3"></textarea>
+      <div class="modal-actions">
+        <button class="btn-secondary" onclick="closeModal()">Cancelar</button>
+        <button class="btn-primary" onclick="submitHandoff()">Enviar ticket</button>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const chatBox = document.getElementById('chatBox');
+    const questionInput = document.getElementById('questionInput');
+    const sendBtn = document.getElementById('sendBtn');
+
+    function appendMessage(html, sender) {
+      const div = document.createElement('div');
+      div.className = `msg ${sender}`;
+      div.innerHTML = html;
+      chatBox.appendChild(div);
+      chatBox.scrollTop = chatBox.scrollHeight;
+      return div;
+    }
+
+    function sendQuick(text) {
+      questionInput.value = text;
+      sendMessage();
+    }
+
+    async function sendMessage() {
+      const q = questionInput.value.trim();
+      if (!q) return;
+
+      appendMessage(q, 'user');
+      questionInput.value = '';
+      sendBtn.disabled = true;
+
+      const loadingMsg = appendMessage('<em>Consultando reglamentos oficiales de la FISC...</em>', 'bot');
+
+      try {
+        const res = await fetch('/api/chat', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ question: q, category: 'Prueba Piloto SUS' })
+        });
+        const data = await res.json();
+
+        let sourcesHtml = data.sources && data.sources.length
+          ? `<span class="badge">Fuente: ${data.sources.join(', ')}</span>`
+          : `<span class="badge-warn">Confianza &lt; 0.70 (Derivación sugerida)</span>`;
+
+        let handoffBtn = data.derived
+          ? `<br><button class="handoff-inline" onclick="openModal(\`${q.replace(/`/g, '')}\`)">Derivar a Secretaría Académica</button>`
+          : '';
+
+        loadingMsg.innerHTML = `
+          <div>${data.answer.replace(/\n/g, '<br>')}</div>
+          ${handoffBtn}
+          <div class="meta-bar">
+            ${sourcesHtml}
+            <span>Similitud: <strong>${data.confidence}</strong></span>
+            <span>Latencia: <strong>${data.latency_s} s</strong></span>
+          </div>
+        `;
+      } catch (err) {
+        loadingMsg.innerHTML = 'Error al conectar con el servidor del prototipo.';
+      } finally {
+        sendBtn.disabled = false;
+        questionInput.focus();
+      }
+    }
+
+    function openModal(prefillQuestion) {
+      document.getElementById('hQuestion').value = prefillQuestion || '';
+      document.getElementById('handoffModal').style.display = 'flex';
+    }
+
+    function closeModal() {
+      document.getElementById('handoffModal').style.display = 'none';
+    }
+
+    async function submitHandoff() {
+      const student_name = document.getElementById('hName').value.trim();
+      const student_email = document.getElementById('hEmail').value.trim();
+      const question = document.getElementById('hQuestion').value.trim();
+
+      if (!student_name || !student_email || !question) {
+        alert('Completa todos los campos para registrar la derivación.');
+        return;
+      }
+
+      const res = await fetch('/api/derivar', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ student_name, student_email, question, notes: 'Prueba Piloto SUS' })
+      });
+      const data = await res.json();
+      closeModal();
+      appendMessage(`<strong>Derivación confirmada:</strong> ${data.message}`, 'bot');
+    }
+  </script>
+</body>
+</html>
